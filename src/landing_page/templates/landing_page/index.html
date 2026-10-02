@@ -1,29 +1,129 @@
 {% extends 'landing_page/base.html' %}
 {% load static %}
 {% block content %}
-    <h1>Welcome to the landing page</h1>
-    This is a blank landing page which inherits from landing_page/base.html. Feel free to add more routes to this app and edit the base.html file to add more content to the landing page.
-    <h2>Editing Instructions</h2>
-    <ol>
-        <li>
-            The default favicon can be found in static/landing_page/images/favicon.png. To use your own logo, simply replace favicon.png with your own image <strong>(use the same image name or edit base.html to reflect the new name).</strong>
-        </li>
-        <li>
-            There are two CSS files in this app - <h2>reset.css</h2> and <strong>index.css</strong>.
-            <ul>
-                <li>
-                    reset.css is used to reset the default CSS of the browser. I used <a href="http://meyerweb.com/eric/tools/css/reset/"
-    target="_blank"
-    rel="noopener noreferrer">this</a> CSS reset from Meyerweb but feel free to replace it with Normalize CSS or any other CSS reset.
-                </li>
-                <li>index.css is used to style this page. Feel free to delete this CSS file and replace it with your own.</li>
-            </ul>
-        </li>
-    </ol>
-    <p>
-        To log in, click <a href="{% url 'accounts:login' %}">here</a>
-    </p>
-    <p>
-        To register, click <a href="{% url 'accounts:register' %}">here</a>
-    </p>
+
+<div class="hero-wrap">
+  <header class="hero text-center" style="background-image: url({% static 'landing_page/images/hero.jpg' %});">
+    <div class="container">
+      <h1 class="display-3 fw-bold text-white">Welcome to SwampWorks</h1>
+      <div class="accent-bar mx-auto my-4"></div>
+      <p class="lead text-white">Placeholder</p>
+      <a href="{% url 'landing_page:projects' %}" class="btn btn-success btn-lg me-2">See our projects</a>
+      <a href="{% url 'landing_page:contact' %}" class="btn btn-outline-light btn-lg">Contact us</a>
+    </div>
+    <a href="#projects" id="scroll-cue" class="scroll-cue" aria-label="Scroll to projects">&#8595;</a>
+  </header>
+</div>
+
+<section id="projects" class="cover-section">
+  <div class="container py-5">
+    <h2 class="section-title text-navy mb-4">Projects</h2>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card sw-card h-100"><div class="card-body p-4">
+          <h5 class="card-title">Placeholder</h5>
+          <p class="card-text">Lorem ipsum dolor sit amet</p>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card sw-card h-100"><div class="card-body p-4">
+          <h5 class="card-title">Placeholder</h5>
+          <p class="card-text">Lorem ipsum dolor sit amet</p>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card sw-card h-100"><div class="card-body p-4">
+          <h5 class="card-title">Placeholder</h5>
+          <p class="card-text">Lorem ipsum dolor sit amet</p>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var nav = document.querySelector('.navbar');
+  var wrap = document.querySelector('.hero-wrap');
+  var hero = document.querySelector('.hero');
+  var cue = document.getElementById('scroll-cue');
+  var target = document.getElementById('projects');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Measure the real navbar height so the hero fills exactly the rest of the screen
+  function navHeight() { return nav ? nav.offsetHeight : 0; }
+  function setNavHeight() {
+    document.documentElement.style.setProperty('--sw-navbar-h', navHeight() + 'px');
+  }
+  setNavHeight();
+  window.addEventListener('resize', setNavHeight);
+
+  // Parallax: the hero moves at half the scroll speed while the white section covers it
+  var ticking = false;
+  function updateParallax() {
+    ticking = false;
+    var s = Math.min(Math.max(window.scrollY, 0), wrap.offsetHeight);
+    hero.style.transform = 'translate3d(0,' + (s * 0.5) + 'px,0)';
+  }
+  if (!reduceMotion) {
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(updateParallax); }
+    }, { passive: true });
+    updateParallax();
+  }
+
+  // Arrow scroll: exponential decay with a separate rate for each half of the distance
+  var TAU_FIRST  = 750;  // ms, first half of the distance. Smaller = faster, harder start
+  var TAU_SECOND = 1500;  // ms, second half. Larger = slower, longer tail
+  var raf = null;
+  function cancelScroll() { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+
+  // progress goes 0 -> 1 over the trip; the rate blends smoothly from
+  // TAU_FIRST to TAU_SECOND around the halfway point so there's no sudden jolt
+  function tauAt(progress) {
+    var t = Math.min(Math.max((progress - 0.4) / 0.2, 0), 1);  // 0 before 40%, 1 after 60%
+    t = t * t * (3 - 2 * t);                                   // smoothstep
+    return TAU_FIRST + (TAU_SECOND - TAU_FIRST) * t;
+  }
+
+  function scrollToY(targetY) {
+    cancelScroll();
+    var pos = window.scrollY;
+    var total = targetY - pos;
+    if (reduceMotion || Math.abs(total) < 1) {
+      window.scrollTo({ top: targetY, behavior: 'instant' });
+      return;
+    }
+    var last = performance.now();
+    function step(now) {
+      var dt = now - last;
+      last = now;
+      var progress = 1 - (targetY - pos) / total;
+      var tau = tauAt(progress);
+      pos = targetY - (targetY - pos) * Math.exp(-dt / tau);
+      if (Math.abs(targetY - pos) < 1) {
+        window.scrollTo({ top: targetY, behavior: 'instant' });
+        raf = null;
+        return;
+      }
+      window.scrollTo({ top: pos, behavior: 'instant' });
+      raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+  }
+
+  // let the user interrupt the animation by scrolling manually
+  ['wheel', 'touchstart', 'keydown'].forEach(function (evt) {
+    window.addEventListener(evt, cancelScroll, { passive: true });
+  });
+
+  if (cue && target) {
+    cue.addEventListener('click', function (e) {
+      e.preventDefault();
+      scrollToY(target.getBoundingClientRect().top + window.scrollY - navHeight());
+    });
+  }
+})();
+</script>
+
 {% endblock content %}
